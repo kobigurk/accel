@@ -75,6 +75,7 @@ enum Depenency {
         branch: Option<String>,
         tag: Option<String>,
         hash: Option<String>,
+        package: Option<String>,
         default_features: Option<bool>,
         #[serde(default)]
         features: Vec<String>,
