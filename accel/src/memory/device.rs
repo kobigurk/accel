@@ -1,7 +1,8 @@
 //! Device and Host memory handlers
 
 use super::*;
-use crate::{error::*, *};
+use crate::*;
+use crate::{error::*};
 use cuda::*;
 use std::{
     fmt,
@@ -31,7 +32,7 @@ impl<T> Drop for DeviceMemory<T> {
     }
 }
 
-impl<T: Scalar> fmt::Debug for DeviceMemory<T> {
+impl<T: std::fmt::Debug + Copy + Send + Sync + Default> fmt::Debug for DeviceMemory<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DeviceMemory")
             .field("context", &self.context)
@@ -67,7 +68,7 @@ impl<T: Scalar> PartialEq<[T]> for DeviceMemory<T> {
     }
 }
 
-impl<T: Scalar> Memory for DeviceMemory<T> {
+impl<T: std::fmt::Debug + Copy + Send + Sync + Default> Memory for DeviceMemory<T> {
     type Elem = T;
     fn head_addr(&self) -> *const T {
         self.ptr as _
@@ -85,46 +86,68 @@ impl<T: Scalar> Memory for DeviceMemory<T> {
         MemoryType::Device
     }
 
-    fn set(&mut self, value: T) {
-        match T::size_of() {
-            1 => unsafe {
-                contexted_call!(
-                    self,
-                    cuMemsetD8_v2,
-                    self.head_addr_mut() as CUdeviceptr,
-                    value.to_le_u8().unwrap(),
-                    self.num_elem()
-                )
-            }
-            .expect("memset failed for 8-bit scalar"),
-            2 => unsafe {
-                contexted_call!(
-                    self,
-                    cuMemsetD16_v2,
-                    self.head_addr_mut() as CUdeviceptr,
-                    value.to_le_u16().unwrap(),
-                    self.num_elem()
-                )
-            }
-            .expect("memset failed for 16-bit scalar"),
-            4 => unsafe {
-                contexted_call!(
-                    self,
-                    cuMemsetD32_v2,
-                    self.head_addr_mut() as CUdeviceptr,
-                    value.to_le_u32().unwrap(),
-                    self.num_elem()
-                )
-            }
-            .expect("memset failed for 64-bit scalar"),
-            _ => {
-                unimplemented!("memset for Device memory is only supported for 8/16/32-bit scalars")
-            }
-        }
+    // TO DO: replace this with size_of<T> and to T: ToBytes
+    fn set(&mut self, _value: T) {
+        unsafe {
+            contexted_call!(
+               self,
+               cuMemsetD8_v2,
+               self.head_addr_mut() as CUdeviceptr,
+               0u8, // value.try_into(),// .to_le_u8().unwrap(),
+               self.num_elem() * core::mem::size_of::<T>()
+           );
+       }
+        // unimplemented!()
+        // match T::size_of() {
+        //     1 => unsafe {
+        //         contexted_call!(
+        //             self,
+        //             cuMemsetD8_v2,
+        //             self.head_addr_mut() as CUdeviceptr,
+        //             value.try_into(),// .to_le_u8().unwrap(),
+        //             self.num_elem()
+        //         )
+        //     }
+        //     .expect("memset failed for 8-bit scalar"),
+        //     2 => unsafe {
+        //         contexted_call!(
+        //             self,
+        //             cuMemsetD16_v2,
+        //             self.head_addr_mut() as CUdeviceptr,
+        //             value.try_into(),// .to_le_u16().unwrap(),
+        //             self.num_elem()
+        //         )
+        //     }
+        //     .expect("memset failed for 16-bit scalar"),
+        //     4 => unsafe {
+        //         contexted_call!(
+        //             self,
+        //             cuMemsetD32_v2,
+        //             self.head_addr_mut() as CUdeviceptr,
+        //             value.try_into(),// .to_le_u32().unwrap(),
+        //             self.num_elem()
+        //         )
+        //     }
+        //     .expect("memset failed for 32-bit scalar"),
+        //     _ => {
+        //         unimplemented!()
+        //         // for i in 0..n {
+        //         //     unsafe {
+        //         //         contexted_call!(
+        //         //             self,
+        //         //             cuMemsetD32_v2,
+        //         //             self.head_addr_mut() as CUdeviceptr,
+        //         //             value.to_le_u32().unwrap(),
+        //         //             self.num_elem()
+        //         //         )
+        //         //     }
+        //         // }
+        //     }
+        // }
     }
 }
 
-impl<T: Scalar> Continuous for DeviceMemory<T> {
+impl<T: std::fmt::Debug + Copy + Send + Sync + Default> Continuous for DeviceMemory<T> {
     fn as_slice(&self) -> &[T] {
         self
     }
@@ -133,7 +156,7 @@ impl<T: Scalar> Continuous for DeviceMemory<T> {
     }
 }
 
-impl<T: Scalar> Allocatable for DeviceMemory<T> {
+impl<T: std::fmt::Debug + Copy + Send + Sync + Default> Allocatable for DeviceMemory<T> {
     type Shape = usize;
     unsafe fn uninitialized(context: &Context, size: usize) -> Self {
         assert!(size > 0, "Zero-sized malloc is forbidden");
@@ -153,14 +176,14 @@ impl<T: Scalar> Allocatable for DeviceMemory<T> {
     }
 }
 
-impl<'arg, T: Scalar> DeviceSend for &'arg DeviceMemory<T> {
+impl<'arg, T: std::fmt::Debug + Copy + Send + Sync + Default> DeviceSend for &'arg DeviceMemory<T> {
     type Target = *const T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         &self.ptr as *const CUdeviceptr as *mut c_void
     }
 }
 
-impl<'arg, T: Scalar> DeviceSend for &'arg mut DeviceMemory<T> {
+impl<'arg, T: std::fmt::Debug + Copy + Send + Sync + Default> DeviceSend for &'arg mut DeviceMemory<T> {
     type Target = *mut T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         &self.ptr as *const CUdeviceptr as *mut c_void

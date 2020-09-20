@@ -125,7 +125,7 @@ pub enum MemoryType {
 /// Has unique head address and allocated size.
 pub trait Memory {
     /// Scalar type of each element
-    type Elem: Scalar;
+    type Elem: std::fmt::Debug + Copy + Send + Sync + Default;
 
     /// Get head address of the memory as a const pointer
     fn head_addr(&self) -> *const Self::Elem;
@@ -357,7 +357,7 @@ pub trait Allocatable: Contexted + Memory + Sized {
     /// ------
     /// - if shape is zero
     fn zeros(ctx: &Context, shape: Self::Shape) -> Self {
-        Self::from_elem(ctx, shape, <Self::Elem as Zero>::zero())
+        Self::from_elem(ctx, shape, Self::Elem::default())
     }
 }
 

@@ -41,7 +41,16 @@ pub fn generate(item: TokenStream) -> TokenStream {
                         ),*
                     {
                         let grid = grid.into();
+                        println!("Launching kernel");
+                        println!("Grid: {:?} {:?} {:?}",
+                        grid.x,
+                        grid.y,
+                        grid.z,);
                         let block = block.into();
+                        println!("Block: {:?} {:?} {:?}",
+                        block.x,
+                        block.y,
+                        block.z,);
                         let kernel = self.get_kernel()?;
                         let mut args = [#(#args_value.as_kernel_parameter()),*];
                         unsafe {
