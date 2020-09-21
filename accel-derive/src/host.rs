@@ -140,14 +140,17 @@ fn caller(func: &syn::ItemFn) -> TokenStream {
     }
 }
 
-
 pub fn mod2caller(ptx_str: &str, func: &syn::ItemFn, content: Vec<syn::Item>) -> TokenStream {
     let impl_submodule = impl_submodule(ptx_str, func);
+    let ident = syn::Ident::new(&format!("{}_kernel", &func.sig.ident), Span::call_site());
     let caller = caller(func);
     let res = quote! {
-        #(#content)*
-        #impl_submodule
-        #caller
+        mod #ident {
+            #![allow(unused)]
+            #(#content)*
+            #impl_submodule
+            #caller
+        }
     };
     res
 }

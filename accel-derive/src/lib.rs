@@ -35,7 +35,6 @@ pub fn kernel_mod(_attr: TokenStream, func: TokenStream) -> TokenStream {
     let module: syn::ItemMod = syn::parse(func).expect("Not a function");
     let (ptx_str, func, content) = builder::compile_tokens_mod(&module).expect("Failed to compile to PTX");
     let res = host::mod2caller(&ptx_str, &func, content).into();
-    println!("DONE");
     res
 }
 

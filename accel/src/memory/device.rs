@@ -87,6 +87,7 @@ impl<T: std::fmt::Debug + Copy + Send + Sync + Default> Memory for DeviceMemory<
     }
 
     // TO DO: replace this with size_of<T> and to T: ToBytes
+    // Ignore endianness
     fn set(&mut self, _value: T) {
         unsafe {
             contexted_call!(
