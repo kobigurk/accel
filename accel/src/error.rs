@@ -5,6 +5,8 @@ pub type Result<T> = ::std::result::Result<T, AccelError>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AccelError {
+    #[error("CUDA Device Initialisation failed")]
+    InitFailed,
     /// Raw errors originates from CUDA Device APIs
     #[error("CUDA Device API Error: {api_name}, {error:?}")]
     CUDAError {

@@ -3,7 +3,8 @@
 //! [Device]:  https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__DEVICE.html
 //! [Context]: https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__CTX.html
 
-use crate::{error::*, *};
+use crate::*;
+use crate::{error::*};
 use cuda::*;
 use std::sync::{Arc, Once};
 
@@ -15,18 +16,29 @@ pub struct Device {
     device: CUdevice,
 }
 
+static mut CUDA_INIT_SUCCESS: bool = false;
+
 impl Device {
     /// Initializer for CUDA Driver API
-    fn init() {
+    pub fn init() -> bool {
         static DRIVER_API_INIT: Once = Once::new();
-        DRIVER_API_INIT.call_once(|| unsafe {
-            ffi_call!(cuda::cuInit, 0).expect("Initialization of CUDA Driver API failed");
-        });
+        unsafe {
+            DRIVER_API_INIT.call_once(|| {
+                CUDA_INIT_SUCCESS = match ffi_call!(cuda::cuInit, 0) {
+                    Ok(()) => true,
+                    _ => false,
+                }
+            });
+            CUDA_INIT_SUCCESS
+        }
     }
 
     /// Get number of available GPUs
     pub fn get_count() -> Result<usize> {
-        Self::init();
+        (match Self::init() {
+            true => Ok(()),
+            false => Err(AccelError::InitFailed),
+        })?;
         let mut count: i32 = 0;
         unsafe {
             ffi_call!(cuDeviceGetCount, &mut count as *mut i32)?;
