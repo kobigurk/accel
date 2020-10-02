@@ -6,7 +6,8 @@
 use crate::*;
 use crate::{error::*};
 use cuda::*;
-use std::sync::{Arc, Once};
+use std::sync::{Arc, Once, Mutex};
+use lazy_static::lazy_static;
 
 pub use accel_derive::Contexted;
 
@@ -15,22 +16,24 @@ pub use accel_derive::Contexted;
 pub struct Device {
     device: CUdevice,
 }
-
-static mut CUDA_INIT_SUCCESS: bool = false;
+lazy_static! {
+    static ref CUDA_INIT_SUCCESS: Mutex<bool> = Mutex::new(false);
+}
 
 impl Device {
     /// Initializer for CUDA Driver API
     pub fn init() -> bool {
         static DRIVER_API_INIT: Once = Once::new();
+        let mut inner = CUDA_INIT_SUCCESS.lock().unwrap();
         unsafe {
             DRIVER_API_INIT.call_once(|| {
-                CUDA_INIT_SUCCESS = match ffi_call!(cuda::cuInit, 0) {
+                *inner = match ffi_call!(cuda::cuInit, 0) {
                     Ok(()) => true,
                     _ => false,
                 }
             });
-            CUDA_INIT_SUCCESS
         }
+        *inner
     }
 
     /// Get number of available GPUs
