@@ -1,12 +1,14 @@
 //! Device and Host memory handlers
 
 use super::*;
-use crate::{error::Result, *};
+use crate::*;
+use crate::error::Result;
 use cuda::*;
 use std::{
     fmt,
     ops::{Deref, DerefMut},
 };
+use log::error;
 
 /// Host memory as page-locked.
 ///
@@ -30,12 +32,12 @@ unsafe impl<T> Send for PageLockedMemory<T> {}
 impl<T> Drop for PageLockedMemory<T> {
     fn drop(&mut self) {
         if let Err(e) = unsafe { contexted_call!(self, cuMemFreeHost, self.ptr as *mut _) } {
-            log::error!("Cannot free page-locked memory: {:?}", e);
+            error!("Cannot free page-locked memory: {:?}", e);
         }
     }
 }
 
-impl<T: Scalar> fmt::Debug for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> fmt::Debug for PageLockedMemory<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("PageLockedMemory")
             .field("context", &self.context)
@@ -57,19 +59,19 @@ impl<T> DerefMut for PageLockedMemory<T> {
     }
 }
 
-impl<T: Scalar> PartialEq for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> PartialEq for PageLockedMemory<T> {
     fn eq(&self, other: &Self) -> bool {
         self.as_slice().eq(other.as_slice())
     }
 }
 
-impl<T: Scalar> PartialEq<[T]> for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> PartialEq<[T]> for PageLockedMemory<T> {
     fn eq(&self, other: &[T]) -> bool {
         self.as_slice().eq(other)
     }
 }
 
-impl<T: Scalar> Memory for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memory for PageLockedMemory<T> {
     type Elem = T;
     fn head_addr(&self) -> *const T {
         self.ptr as _
@@ -90,9 +92,18 @@ impl<T: Scalar> Memory for PageLockedMemory<T> {
     fn set(&mut self, value: Self::Elem) {
         self.iter_mut().for_each(|v| *v = value);
     }
+
+    fn set_zero_u8(&mut self) {
+        unsafe {
+            let (_, self_as_u8, _) = self.align_to_mut::<u8>();
+            self_as_u8.iter_mut().for_each(|v|
+                *v = 0u8
+            );
+        }
+    }
 }
 
-impl<T: Scalar> Continuous for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Continuous for PageLockedMemory<T> {
     fn as_slice(&self) -> &[T] {
         self
     }
@@ -101,7 +112,7 @@ impl<T: Scalar> Continuous for PageLockedMemory<T> {
     }
 }
 
-impl<T: Scalar> Allocatable for PageLockedMemory<T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Allocatable for PageLockedMemory<T> {
     type Shape = usize;
     unsafe fn uninitialized(context: &Context, size: usize) -> Self {
         assert!(size > 0, "Zero-sized malloc is forbidden");
@@ -115,14 +126,14 @@ impl<T: Scalar> Allocatable for PageLockedMemory<T> {
     }
 }
 
-impl<'arg, T: Scalar> DeviceSend for &'arg PageLockedMemory<T> {
+impl<'arg, T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> DeviceSend for &'arg PageLockedMemory<T> {
     type Target = *const T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         &self.ptr as *const *mut T as *mut c_void
     }
 }
 
-impl<'arg, T: Scalar> DeviceSend for &'arg mut PageLockedMemory<T> {
+impl<'arg, T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> DeviceSend for &'arg mut PageLockedMemory<T> {
     type Target = *mut T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         &self.ptr as *const *mut T as *mut c_void

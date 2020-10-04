@@ -125,7 +125,7 @@ pub enum MemoryType {
 /// Has unique head address and allocated size.
 pub trait Memory {
     /// Scalar type of each element
-    type Elem: std::fmt::Debug + Copy + Send + Sync + Default;
+    type Elem: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized;
 
     /// Get head address of the memory as a const pointer
     fn head_addr(&self) -> *const Self::Elem;
@@ -184,6 +184,9 @@ pub trait Memory {
     /// }
     /// ```
     fn set(&mut self, value: Self::Elem);
+
+    /// Sets memory to 0u8 for as many bytes as size_of::<T>() contains
+    fn set_zero_u8(&mut self);
 }
 
 /// Copy data from one to another
@@ -357,7 +360,9 @@ pub trait Allocatable: Contexted + Memory + Sized {
     /// ------
     /// - if shape is zero
     fn zeros(ctx: &Context, shape: Self::Shape) -> Self {
-        Self::from_elem(ctx, shape, Self::Elem::default())
+        let mut mem = unsafe { Self::uninitialized(ctx, shape) };
+        mem.set_zero_u8();
+        mem
     }
 }
 

@@ -39,7 +39,7 @@ fn get_context<T>(ptr: *const T) -> Option<ContextRef> {
     Some(ContextRef::from_ptr(ptr))
 }
 
-impl<T: Scalar> Memory for [T] {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memory for [T] {
     type Elem = T;
     fn head_addr(&self) -> *const T {
         self.as_ptr()
@@ -62,9 +62,18 @@ impl<T: Scalar> Memory for [T] {
             *val = value;
         }
     }
+
+    fn set_zero_u8(&mut self) {
+        unsafe {
+            let (_, self_as_u8, _) = self.align_to_mut::<u8>();
+            self_as_u8.iter_mut().for_each(|v|
+                *v = 0u8
+            );
+        }
+    }
 }
 
-impl<T: Scalar> Memcpy<[T]> for [T] {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memcpy<[T]> for [T] {
     fn copy_from(&mut self, src: &[T]) {
         assert_ne!(self.head_addr(), src.head_addr());
         assert_eq!(self.num_elem(), src.num_elem());
@@ -75,7 +84,7 @@ impl<T: Scalar> Memcpy<[T]> for [T] {
                     cuMemcpy,
                     self.head_addr_mut() as CUdeviceptr,
                     src.as_ptr() as CUdeviceptr,
-                    self.num_elem() * T::size_of()
+                    self.num_elem() * core::mem::size_of::<T>()
                 )
             }
             .unwrap()
@@ -118,7 +127,7 @@ impl<T: Scalar> Memcpy<[T]> for [T] {
 
 macro_rules! impl_memcpy_slice {
     ($t:path) => {
-        impl<T: Scalar> Memcpy<[T]> for $t {
+        impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memcpy<[T]> for $t {
             fn copy_from(&mut self, src: &[T]) {
                 self.as_mut_slice().copy_from(src);
             }
@@ -127,7 +136,7 @@ macro_rules! impl_memcpy_slice {
             }
         }
 
-        impl<T: Scalar> Memcpy<$t> for [T] {
+        impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memcpy<$t> for [T] {
             fn copy_from(&mut self, src: &$t) {
                 self.copy_from(src.as_slice());
             }
@@ -144,7 +153,7 @@ impl_memcpy_slice!(RegisteredMemory::<'_, T>);
 
 macro_rules! impl_memcpy {
     ($from:path, $to:path) => {
-        impl<T: Scalar> Memcpy<$from> for $to {
+        impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memcpy<$from> for $to {
             fn copy_from(&mut self, src: &$from) {
                 self.as_mut_slice().copy_from(src.as_slice());
             }
@@ -165,7 +174,7 @@ impl_memcpy!(RegisteredMemory::<'_, T>, DeviceMemory::<T>);
 impl_memcpy!(RegisteredMemory::<'_, T>, RegisteredMemory::<'_, T>);
 impl_memcpy!(RegisteredMemory::<'_, T>, PageLockedMemory::<T>);
 
-impl<T: Scalar> Continuous for [T] {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Continuous for [T] {
     fn as_slice(&self) -> &[Self::Elem] {
         self
     }

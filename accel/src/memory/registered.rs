@@ -28,13 +28,13 @@ impl<T> DerefMut for RegisteredMemory<'_, T> {
     }
 }
 
-impl<T: Scalar> PartialEq for RegisteredMemory<'_, T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> PartialEq for RegisteredMemory<'_, T> {
     fn eq(&self, other: &Self) -> bool {
         self.as_slice().eq(other.as_slice())
     }
 }
 
-impl<T: Scalar> PartialEq<[T]> for RegisteredMemory<'_, T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> PartialEq<[T]> for RegisteredMemory<'_, T> {
     fn eq(&self, other: &[T]) -> bool {
         self.as_slice().eq(other)
     }
@@ -54,14 +54,14 @@ impl<T> Drop for RegisteredMemory<'_, T> {
     }
 }
 
-impl<'a, T: Scalar> RegisteredMemory<'a, T> {
+impl<'a, T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> RegisteredMemory<'a, T> {
     pub fn new(context: &Context, data: &'a mut [T]) -> Self {
         unsafe {
             contexted_call!(
                 context,
                 cuMemHostRegister_v2,
                 data.as_mut_ptr() as *mut c_void,
-                data.len() * T::size_of(),
+                data.len() * core::mem::size_of::<T>(),
                 0
             )
         }
@@ -73,7 +73,7 @@ impl<'a, T: Scalar> RegisteredMemory<'a, T> {
     }
 }
 
-impl<T: Scalar> Memory for RegisteredMemory<'_, T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Memory for RegisteredMemory<'_, T> {
     type Elem = T;
 
     fn head_addr(&self) -> *const T {
@@ -95,9 +95,18 @@ impl<T: Scalar> Memory for RegisteredMemory<'_, T> {
     fn set(&mut self, value: Self::Elem) {
         self.iter_mut().for_each(|v| *v = value);
     }
+
+    fn set_zero_u8(&mut self) {
+        unsafe {
+            let (_, self_as_u8, _) = self.align_to_mut::<u8>();
+            self_as_u8.iter_mut().for_each(|v|
+                *v = 0u8
+            );
+        }
+    }
 }
 
-impl<T: Scalar> Continuous for RegisteredMemory<'_, T> {
+impl<T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> Continuous for RegisteredMemory<'_, T> {
     fn as_slice(&self) -> &[T] {
         self
     }
@@ -106,14 +115,14 @@ impl<T: Scalar> Continuous for RegisteredMemory<'_, T> {
     }
 }
 
-impl<'arg, 'a: 'arg, T: Scalar> DeviceSend for &'arg RegisteredMemory<'a, T> {
+impl<'arg, 'a: 'arg, T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> DeviceSend for &'arg RegisteredMemory<'a, T> {
     type Target = *const T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         self.data.as_kernel_parameter()
     }
 }
 
-impl<'arg, 'a: 'arg, T: Scalar> DeviceSend for &'arg mut RegisteredMemory<'a, T> {
+impl<'arg, 'a: 'arg, T: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized> DeviceSend for &'arg mut RegisteredMemory<'a, T> {
     type Target = *mut T;
     fn as_kernel_parameter(&self) -> *mut c_void {
         self.data.as_kernel_parameter()

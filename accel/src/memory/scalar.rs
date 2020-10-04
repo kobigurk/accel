@@ -1,7 +1,7 @@
 pub use cuda::CUarray_format as ArrayFormatTag;
-use num_traits::Num;
 
-pub trait Scalar: Num + std::fmt::Debug + Copy + Send + Sync + Default {
+// Scalar is only used for Arrays
+pub trait Scalar: PartialEq + std::fmt::Debug + Copy + Send + Sync + Default + Sized {
     fn format() -> ArrayFormatTag;
 
     fn size_of() -> usize {

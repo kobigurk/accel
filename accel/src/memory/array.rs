@@ -4,11 +4,13 @@
 //! [Texture]: https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TEXOBJECT.html#group__CUDA__TEXOBJECT
 //! [Surface]: https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__SURFOBJECT.html#group__CUDA__SURFOBJECT
 
-use crate::{contexted_call, contexted_new, device::Contexted, error::Result, *};
+use crate::*;
+use crate::{contexted_call, contexted_new, device::Contexted, error::Result};
 use cuda::*;
 use futures::future::BoxFuture;
 use num_traits::ToPrimitive;
 use std::marker::PhantomData;
+use log::error;
 
 pub use cuda::CUDA_ARRAY3D_DESCRIPTOR as Descriptor;
 
@@ -26,7 +28,7 @@ unsafe impl<T, Dim> Sync for Array<T, Dim> {}
 impl<T, Dim> Drop for Array<T, Dim> {
     fn drop(&mut self) {
         if let Err(e) = unsafe { contexted_call!(self, cuArrayDestroy, self.array) } {
-            log::error!("Failed to cleanup array: {:?}", e);
+            error!("Failed to cleanup array: {:?}", e);
         }
     }
 }
@@ -59,6 +61,12 @@ impl<T: Scalar, Dim: Dimension> Memory for Array<T, Dim> {
         // FIXME CUDA does not have memcpy for array. This is easy but too expensive alternative way
         let src = PageLockedMemory::from_elem(&self.context, self.dim.len(), value);
         self.copy_from(&src);
+    }
+
+    fn set_zero_u8(&mut self) {
+        let mut mem = unsafe { PageLockedMemory::uninitialized(&self.context, self.dim.len()) };
+        mem.set_zero_u8();
+        self.copy_from(&mem);
     }
 }
 
