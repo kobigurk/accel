@@ -1,7 +1,6 @@
 Accel: GPGPU Framework for Rust
 ================================
-
-[![pipeline status](https://gitlab.com/termoshtt/accel/badges/master/pipeline.svg)](https://gitlab.com/termoshtt/accel/commits/master)
+This has been forked away from the original repo at https://github.com/termoshtt/accel since this author has determined that that project is no longer viable and not a condusive open-source environment. Please consider contributing to this repo instead as there is likely to be more development here. We already support more generic types, like structs and arrays, as data types for gpu kernels, as well as module-level rather than function-level compilation, a major limitation of the original accel.
 
 |crate       |crates.io                                                                   |docs.rs                                                                |GitLab Pages                                                                  |                                           |
 |:-----------|:---------------------------------------------------------------------------|:----------------------------------------------------------------------|:-----------------------------------------------------------------------------|:------------------------------------------|
