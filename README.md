@@ -33,7 +33,7 @@ Requirements
   - There is an [setup script](setup_nvptx_toolchain.sh) for them:
 
 ```
-curl -sSL https://gitlab.com/termoshtt/accel/raw/master/setup_nvptx_toolchain.sh | bash
+curl -sSL https://gitlab.com/jon-chuang/accel/raw/master/setup_nvptx_toolchain.sh | bash
 ```
 
 Or, you can use [docker container](./docker)
@@ -52,15 +52,6 @@ This project is still in early stage. There are several limitations as following
   - [libstd cannot be used in writing kernel](https://gitlab.com/termoshtt/accel/-/issues/38)
   - [Rust slice cannot be used in writing kernel](https://gitlab.com/termoshtt/accel/-/issues/7)
   - [Shared memory](https://gitlab.com/termoshtt/accel/-/issues/39) cannot be used
-
-Contribution
-------------
-This project is developed on [GitLab](https://gitlab.com/termoshtt/accel) and mirrored to [GitHub](https://github.com/rust-accel/accel).
-
-Sponsors
---------
-- [RICOS Co. Ltd](https://www.ricos.co.jp/)
-  - GPU instances for CI and development
 
 Links
 ------
