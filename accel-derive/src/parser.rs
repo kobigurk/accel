@@ -57,6 +57,40 @@ impl MetaData {
             .or_insert_with(|| Depenency::Version("0.3.0-alpha.4".into()));
         Ok(kernel_attrs)
     }
+
+    pub fn from_module(func: &syn::ItemMod) -> Fallible<Self> {
+        let attrs = &func.attrs;
+        let mut kernel_attrs = MetaData::new(&func.ident.to_string());
+        for attr in attrs {
+            let path = attr.path.to_token_stream().to_string();
+            match path.as_ref() {
+                "dependencies" => {
+                    let dep = parse_dependency(
+                        attr.tokens
+                            .to_string()
+                            .trim_start_matches('(')
+                            .trim_end_matches(')'),
+                    )?;
+                    for (key, val) in dep {
+                        kernel_attrs.dependencies.insert(key, val);
+                    }
+                }
+                "name" => {
+                    let token = attr.tokens.to_string();
+                    let name = token.trim_start_matches('(').trim_end_matches(')').trim();
+                    kernel_attrs.package.insert("name", name.into());
+                }
+                _ => {
+                    continue;
+                }
+            }
+        }
+        kernel_attrs
+            .dependencies
+            .entry("accel-core".into())
+            .or_insert_with(|| Depenency::Version("0.3.0-alpha.4".into()));
+        Ok(kernel_attrs)
+    }
 }
 
 // Should I use `cargo::core::dependency::Depenency`?

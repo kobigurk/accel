@@ -1,10 +1,12 @@
 use super::*;
-use crate::{error::Result, *};
+use crate::*;
+use crate::{error::Result};
 use cuda::*;
 use std::{
     ffi::c_void,
     ops::{Deref, DerefMut},
 };
+use log::error;
 
 #[derive(Contexted, Debug)]
 pub struct RegisteredMemory<'a, T> {
@@ -49,7 +51,7 @@ impl<T> Drop for RegisteredMemory<'_, T> {
                 self.data.as_mut_ptr() as *mut c_void
             )
         } {
-            log::error!("Failed to unregister memory: {:?}", e);
+            error!("Failed to unregister memory: {:?}", e);
         }
     }
 }

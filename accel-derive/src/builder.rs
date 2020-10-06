@@ -40,7 +40,13 @@ fn ptx_kernel(func: &syn::ItemFn, content: Option<Vec<syn::Item>>) -> String {
     let block = &func.block;
 
     let fn_token = &func.sig.fn_token;
-    let inputs = &func.sig.inputs;
+    let inputs = &mut func.sig.inputs.clone();
+    inputs.iter_mut().for_each(|i| {
+        if let syn::FnArg::Typed(arg) = i {
+            arg.attrs = arg.attrs.clone().into_iter().filter(|a| !a.path.is_ident("type_substitute")).collect();
+        }
+    });
+
     let output = &func.sig.output;
 
     let content = if let Some(inner) = content {
@@ -89,6 +95,7 @@ fn project_id() -> String {
 }
 
 pub fn compile_tokens_mod(module: &syn::ItemMod) -> Fallible<(String, syn::ItemFn, Vec<syn::Item>)> {
+    let meta = MetaData::from_module(module)?;
     // Try to extract kernel function from rest of module.
     let item_vec = &module.content.as_ref().expect("module must contain kernel").1;
 
@@ -111,7 +118,6 @@ pub fn compile_tokens_mod(module: &syn::ItemMod) -> Fallible<(String, syn::ItemF
     let new_content: Vec<syn::Item> = module.content.clone().unwrap().1.into_iter()
         .filter(|i| *i != syn::Item::Fn(func.clone()))
         .collect();
-    let meta = MetaData::from_token(func)?;
 
     // Create crate
     let dir = dirs::cache_dir()

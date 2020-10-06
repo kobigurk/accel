@@ -31,11 +31,23 @@ mod parser;
 use proc_macro::TokenStream;
 
 #[proc_macro_attribute]
-pub fn kernel_mod(_attr: TokenStream, func: TokenStream) -> TokenStream {
-    let module: syn::ItemMod = syn::parse(func).expect("Not a function");
+pub fn kernel_mod(attr: TokenStream, mod_in: TokenStream) -> TokenStream {
+    let kernel_mod_type: String = attr.to_string();
+    let module: syn::ItemMod = syn::parse(mod_in).expect("Not a module");
     let (ptx_str, func, content) = builder::compile_tokens_mod(&module).expect("Failed to compile to PTX");
-    let res = host::mod2caller(&ptx_str, &func, content).into();
-    res
+    if &kernel_mod_type == "to_mod" {
+        host::mod2modcaller(&ptx_str, &func, content).into()
+    } else if &kernel_mod_type == "transparent" {
+        host::mod2caller(&ptx_str, &func, content).into()
+    } else {
+        panic!("Not an acceptable kernel_mod type. Allowed: to_mod, transparent.")
+    }
+}
+
+// We just need an attribute to match against
+#[proc_macro_attribute]
+pub fn type_substitute(_attr: TokenStream, type_annotation: TokenStream) -> TokenStream {
+    type_annotation
 }
 
 // We just need an attribute to match against

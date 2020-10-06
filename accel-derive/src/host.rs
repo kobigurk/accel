@@ -11,7 +11,14 @@ fn input_types(func: &syn::ItemFn) -> Vec<syn::Type> {
         .iter()
         .map(|arg| match arg {
             syn::FnArg::Typed(ref val) => {
+                let attrs = val.attrs.clone();
                 let mut ty = *val.ty.clone();
+
+                attrs.iter().for_each(|a| {
+                    if a.path.is_ident("type_substitute") {
+                        ty = syn::parse2(a.tokens.clone()).expect("not a type");
+                    }
+                });
                 match &mut ty {
                     syn::Type::Reference(re) => {
                         re.lifetime = Some(syn::Lifetime::new("'arg", Span::call_site()))
@@ -140,7 +147,7 @@ fn caller(func: &syn::ItemFn) -> TokenStream {
     }
 }
 
-pub fn mod2caller(ptx_str: &str, func: &syn::ItemFn, content: Vec<syn::Item>) -> TokenStream {
+pub fn mod2modcaller(ptx_str: &str, func: &syn::ItemFn, content: Vec<syn::Item>) -> TokenStream {
     let impl_submodule = impl_submodule(ptx_str, func);
     let ident = syn::Ident::new(&format!("{}_kernel", &func.sig.ident), Span::call_site());
     let caller = caller(func);
@@ -151,6 +158,16 @@ pub fn mod2caller(ptx_str: &str, func: &syn::ItemFn, content: Vec<syn::Item>) ->
             #impl_submodule
             #caller
         }
+    };
+    res
+}
+
+pub fn mod2caller(ptx_str: &str, func: &syn::ItemFn, _content: Vec<syn::Item>) -> TokenStream {
+    let impl_submodule = impl_submodule(ptx_str, func);
+    let caller = caller(func);
+    let res = quote! {
+        #impl_submodule
+        #caller
     };
     res
 }
