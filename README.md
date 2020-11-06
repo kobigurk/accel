@@ -33,7 +33,7 @@ Requirements
   - There is an [setup script](setup_nvptx_toolchain.sh) for them:
 
 ```
-curl -sSL https://gitlab.com/jon-chuang/accel/raw/master/setup_nvptx_toolchain.sh | bash
+curl -sSL https://github.com/jon-chuang/accel/raw/master/setup_nvptx_toolchain.sh | bash
 ```
 
 Or, you can use [docker container](./docker)
